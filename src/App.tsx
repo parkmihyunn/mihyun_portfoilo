@@ -210,7 +210,6 @@ const App: React.FC = () => {
 
         if (slideRect.right > 0 && slideRect.left < viewportWidth) {
           const offset = viewportWidth - (slideRect.left + slideRect.width / 2);
-          // lerp 없이 직접 계산하던 것을 유지하되 계수 조정으로 자연스럽게
           flowTextRef.current.style.transform = `translateX(${-offset * 0.2}px)`; // 속도 조절
         }
       }
@@ -240,7 +239,7 @@ const App: React.FC = () => {
   const copyEmail = (e: React.MouseEvent<HTMLButtonElement>) => {
     const btn = e.currentTarget;
     navigator.clipboard.writeText("pmh3853@naver.com").then(() => {
-      const originalText = btn.innerText;
+      // const originalText = btn.innerText;
       btn.innerText = "Copied";
       btn.style.color = "#0f0f0f";
       setTimeout(() => {
@@ -252,17 +251,17 @@ const App: React.FC = () => {
 
   // 기존 Hover 함수들은 useEffect 내부 로직으로 통합되었으나,
   // iframe 관련 핸들러는 JSX에서 직접 호출되므로 유지
-  const handleIframeEnter = () => {
-    if (cursorRef.current) {
-      cursorRef.current.style.opacity = "0";
-    }
-  };
+  // const handleIframeEnter = () => {
+  //   if (cursorRef.current) {
+  //     cursorRef.current.style.opacity = "0";
+  //   }
+  // };
 
-  const handleIframeLeave = () => {
-    if (cursorRef.current) {
-      cursorRef.current.style.opacity = "1";
-    }
-  };
+  // const handleIframeLeave = () => {
+  //   if (cursorRef.current) {
+  //     cursorRef.current.style.opacity = "1";
+  //   }
+  // };
 
   const paddingLeft = "13.333vw";
   const paddingRight = "30vw";
@@ -347,12 +346,12 @@ const App: React.FC = () => {
           <div className="w-full h-full flex flex-col justify-center z-10 overflow-hidden items-center relative">
             <div
               ref={flowTextRef}
-              className="w-full h-full text-[clamp(20vw,20vw,20vw)] leading-none font-[Pretendard] font-medium whitespace-nowrap will-change-transform flex items-center relative"
+              className="w-full h-full text-[clamp(20rem,20vw,20vw)] leading-none font-[Pretendard] font-medium whitespace-nowrap will-change-transform flex items-center relative"
             >
               Fl&nbsp;
-              <span className="inline-block text-[#ff6702] text-[clamp(20vw,20vw,20vw)] leading-none z-10 mx-[-2rem]">
-                &nbsp;&nbsp;&nbsp;&nbsp;
-                <div className="absolute top-1/2 -right-[13vw] -translate-x-1/2 -translate-y-1/2 h-full aspect-square bg-[#ff6702] rounded-full -z-10" />
+              <span className="inline-block text-[#ff6702] leading-none z-10 mx-3">
+                &nbsp;&nbsp;&nbsp;
+                <div className="absolute top-1/2 -right-[30.5%] -translate-x-1/2 -translate-y-1/2 h-full aspect-square bg-[#ff6702] rounded-full -z-10" />
               </span>
               &nbsp;w
             </div>
