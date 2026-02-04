@@ -211,7 +211,7 @@ const App: React.FC = () => {
         if (slideRect.right > 0 && slideRect.left < viewportWidth) {
           const offset = viewportWidth - (slideRect.left + slideRect.width / 2);
           // lerp 없이 직접 계산하던 것을 유지하되 계수 조정으로 자연스럽게
-          flowTextRef.current.style.transform = `translateX(${-offset * 0.15}px)`; // 속도 조절
+          flowTextRef.current.style.transform = `translateX(${-offset * 0.2}px)`; // 속도 조절
         }
       }
 
