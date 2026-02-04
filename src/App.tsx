@@ -1,5 +1,10 @@
 import React, { useEffect, useRef, useState, useLayoutEffect } from "react";
 
+// --- 유틸리티: 선형 보간 (부드러운 움직임 계산) ---
+const lerp = (start: number, end: number, factor: number) => {
+  return start + (end - start) * factor;
+};
+
 const Reveal = ({
   children,
   delay = 0,
@@ -20,7 +25,7 @@ const Reveal = ({
           observer.disconnect();
         }
       },
-      { threshold: 0.7 },
+      { threshold: 0.6 }, // 트리거 타이밍 미세 조정
     );
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
@@ -30,11 +35,12 @@ const Reveal = ({
     <div
       ref={ref}
       style={{ transitionDelay: `${delay}ms` }}
-      className={`transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] transform
+      // cubic-bezier를 수정하여 더 탄력적인 등장 효과 적용
+      className={`transition-all duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)] transform
         ${
           isVisible
             ? "opacity-100 translate-y-0 blur-0"
-            : "opacity-0 translate-y-[20px] blur-[10px]"
+            : "opacity-0 translate-y-[30px] blur-[10px]"
         } 
         ${className}`}
     >
@@ -48,6 +54,7 @@ interface AnimationState {
   currentX: number;
   targetX: number;
   maxScroll: number;
+  skew: number; // [추가] 스크롤 속도에 따른 기울기 값
 }
 
 const App: React.FC = () => {
@@ -60,13 +67,17 @@ const App: React.FC = () => {
   const flowSlideRef = useRef<HTMLElement>(null);
   const flowTextRef = useRef<HTMLDivElement>(null);
 
-  // [추가] 첫 로딩 시 오프닝 애니메이션 트리거 상태
   const [introLoaded, setIntroLoaded] = useState(false);
+
+  // [추가] 커서의 부드러운 움직임을 위한 좌표 상태
+  const mouse = useRef({ x: 0, y: 0 });
+  const cursor = useRef({ x: 0, y: 0 });
 
   const state = useRef<AnimationState>({
     currentX: 0,
     targetX: 0,
     maxScroll: 0,
+    skew: 0, // 초기 기울기 0
   });
 
   const [, setWindowWidth] = useState(0);
@@ -78,18 +89,16 @@ const App: React.FC = () => {
       history.scrollRestoration = "manual";
     }
 
-    // 마운트 후 약간의 딜레이 뒤에 애니메이션 시작
     setTimeout(() => {
       setIntroLoaded(true);
     }, 100);
   }, []);
 
   useEffect(() => {
-    // 1. 커서
-    const moveCursor = (e: MouseEvent) => {
-      if (cursorRef.current) {
-        cursorRef.current.style.transform = `translate(${e.clientX}px, ${e.clientY}px) translate(-50%, -50%)`;
-      }
+    // 1. 커서 (이벤트에서는 목표 좌표만 저장 -> 애니메이션 루프에서 이동)
+    const onMouseMove = (e: MouseEvent) => {
+      mouse.current.x = e.clientX;
+      mouse.current.y = e.clientY;
     };
 
     const hoverStart = () => {
@@ -106,7 +115,7 @@ const App: React.FC = () => {
       }
     };
 
-    window.addEventListener("mousemove", moveCursor);
+    window.addEventListener("mousemove", onMouseMove);
 
     const attachHoverEvents = () => {
       const targets = document.querySelectorAll(".hover-target");
@@ -121,7 +130,9 @@ const App: React.FC = () => {
         });
       };
     };
-    const detachHover = attachHoverEvents();
+
+    // DOM 렌더링 타이밍 고려하여 약간 딜레이 후 이벤트 바인딩
+    setTimeout(attachHoverEvents, 500);
 
     // 2. 레이아웃 계산
     const calculateLayout = () => {
@@ -130,7 +141,6 @@ const App: React.FC = () => {
         const totalContainerWidth = containerRef.current.scrollWidth;
 
         state.current.maxScroll = totalContainerWidth - viewportWidth;
-
         setWindowWidth(viewportWidth);
       }
     };
@@ -150,15 +160,29 @@ const App: React.FC = () => {
     };
     window.addEventListener("wheel", handleWheel, { passive: false });
 
-    // 4. 애니메이션 루프
+    // 4. 애니메이션 루프 (Physics Engine)
     let animationFrameId: number;
 
     const animate = () => {
-      state.current.currentX +=
-        (state.current.targetX - state.current.currentX) * 0.08;
+      // A. 스크롤 물리 엔진 (Inertia + Skew)
+      // 부드러운 감속 (0.08 -> 0.07로 미세 조정하여 더 무겁고 고급스러운 느낌)
+      state.current.currentX = lerp(
+        state.current.currentX,
+        state.current.targetX,
+        0.05,
+      );
 
-      const { currentX } = state.current;
+      const { currentX, targetX } = state.current;
 
+      // 속도 계산 (현재 위치 - 목표 위치 차이)
+      const velocity = targetX - currentX;
+
+      // [핵심] 속도에 따른 기울기(Skew) 계산. 빠를수록 더 많이 기울어짐.
+      // maxSkew를 두어 너무 심하게 찌그러지지 않도록 제한
+      const targetSkew = velocity * 0.001;
+      state.current.skew = lerp(state.current.skew, targetSkew, 0.1); // 기울기도 부드럽게 전환
+
+      // Zoom 효과 (기존 유지하되 연결성 강화)
       const zoomProgress = Math.min(
         Math.abs(currentX) / (window.innerWidth * 0.25),
         1,
@@ -166,20 +190,32 @@ const App: React.FC = () => {
       const zoomLevel = 1.5 - zoomProgress * 0.5;
 
       if (containerRef.current) {
-        containerRef.current.style.transform = `translate3d(${-currentX}px, 0, 0) scale(${zoomLevel})`;
+        // SkewX 적용으로 젤리 같은 탄성 효과 부여
+        containerRef.current.style.transform = `translate3d(${-currentX}px, 0, 0) scale(${zoomLevel}) skewX(${state.current.skew}deg)`;
       }
 
-      // [2] FLOW 텍스트 Parallax (오른쪽 이동)
+      // B. 커서 물리 엔진 (Fluid Follow)
+      // 마우스 위치를 즉시 따라가지 않고 lerp로 뒤따라감
+      cursor.current.x = lerp(cursor.current.x, mouse.current.x, 0.15);
+      cursor.current.y = lerp(cursor.current.y, mouse.current.y, 0.15);
+
+      if (cursorRef.current) {
+        cursorRef.current.style.transform = `translate3d(${cursor.current.x}px, ${cursor.current.y}px, 0) translate(-50%, -50%)`;
+      }
+
+      // C. FLOW 텍스트 Parallax
       if (flowSlideRef.current && flowTextRef.current) {
         const slideRect = flowSlideRef.current.getBoundingClientRect();
         const viewportWidth = window.innerWidth;
 
         if (slideRect.right > 0 && slideRect.left < viewportWidth) {
           const offset = viewportWidth - (slideRect.left + slideRect.width / 2);
-          flowTextRef.current.style.transform = `translateX(${-offset * 0.25}px)`;
+          // lerp 없이 직접 계산하던 것을 유지하되 계수 조정으로 자연스럽게
+          flowTextRef.current.style.transform = `translateX(${-offset * 0.15}px)`; // 속도 조절
         }
       }
 
+      // D. Progress Bar
       if (progressThumbRef.current && state.current.maxScroll > 0) {
         const scrollPercentage = Math.min(
           Math.max(currentX / state.current.maxScroll, 0),
@@ -194,11 +230,10 @@ const App: React.FC = () => {
     animate();
 
     return () => {
-      window.removeEventListener("mousemove", moveCursor);
+      window.removeEventListener("mousemove", onMouseMove); // 기존 moveCursor 제거됨
       window.removeEventListener("resize", calculateLayout);
       window.removeEventListener("wheel", handleWheel);
       cancelAnimationFrame(animationFrameId);
-      detachHover();
     };
   }, []);
 
@@ -215,15 +250,17 @@ const App: React.FC = () => {
     });
   };
 
+  // 기존 Hover 함수들은 useEffect 내부 로직으로 통합되었으나,
+  // iframe 관련 핸들러는 JSX에서 직접 호출되므로 유지
   const handleIframeEnter = () => {
     if (cursorRef.current) {
-      cursorRef.current.style.opacity = "0"; // 커스텀 커서 숨김
+      cursorRef.current.style.opacity = "0";
     }
   };
 
   const handleIframeLeave = () => {
     if (cursorRef.current) {
-      cursorRef.current.style.opacity = "1"; // 커스텀 커서 보임
+      cursorRef.current.style.opacity = "1";
     }
   };
 
@@ -235,7 +272,8 @@ const App: React.FC = () => {
       {/* Custom Cursor */}
       <div
         ref={cursorRef}
-        className="fixed top-0 left-0 w-5 h-5 bg-[#0f0f0f]/20 rounded-full pointer-events-none z-[9999] transition-[width,height,background-color] duration-300 ease-out"
+        // transform은 JS에서 제어하므로 class에서 제거, transition도 JS Lerp와 충돌 방지 위해 제거
+        className="fixed top-0 left-0 w-5 h-5 bg-[#0f0f0f]/20 rounded-full pointer-events-none z-[9999]"
       />
 
       {/* Progress Bar */}
@@ -263,22 +301,20 @@ const App: React.FC = () => {
       >
         {/* #1 INTRO */}
         <article
-          // 1. 배경 (Article)
-          className={`min-w-162.5 w-[40vw] aspect-5/3 bg-[#f7f7f7] overflow-hidden shrink-0 flex flex-col justify-between relative transform-gpu transition-all duration-200 ease-out
-            ${introLoaded ? "opacity-100 scale-100" : "opacity-0 scale-95"}`}
+          className={`min-w-162.5 w-[40vw] aspect-5/3 bg-[#f7f7f7] overflow-hidden shrink-0 flex flex-col justify-between relative transform-gpu transition-all duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)]
+            ${introLoaded ? "opacity-100 scale-100" : "opacity-0 scale-90"}`}
         >
           {/* 2. 원 (Circle) */}
           <div
-            className={`absolute right-0 w-[60%] aspect-square bg-[#ffea02] rounded-full transition-all duration-800 delay-400 ease-[cubic-bezier(0.34,1.56,0.64,1)]
+            className={`absolute right-0 w-[60%] aspect-square bg-[#ffea02] rounded-full transition-all duration-1000 delay-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]
             ${introLoaded ? "scale-100 opacity-100" : "scale-0 opacity-0"}`}
           ></div>
 
           <div className="w-full h-full p-[2vw] box-border flex flex-col justify-between relative z-10">
             <div className="max-w-3xl">
-              {/* 3. 텍스트 (H1): [수정됨] Blur 효과 적용 */}
               <h1
-                className={`text-[clamp(1vw,2.6vw,2.6vw)] font-semibold leading-[1.5] transition-all duration-800 delay-600 ease-[cubic-bezier(0.16,1,0.3,1)]
-                ${introLoaded ? "opacity-100 translate-y-0 blur-0" : "opacity-0 translate-y-[20px] blur-[10px]"}`}
+                className={`text-[clamp(1vw,2.6vw,2.6vw)] font-semibold leading-[1.5] transition-all duration-1000 delay-500 ease-[cubic-bezier(0.22,1,0.36,1)]
+                ${introLoaded ? "opacity-100 translate-y-0 blur-0" : "opacity-0 translate-y-[40px] blur-[10px]"}`}
               >
                 Crafting Digital <br />
                 &nbsp;&nbsp;Web Experiences
@@ -289,10 +325,9 @@ const App: React.FC = () => {
               </h1>
             </div>
             <div className="mt-4">
-              {/* 3-2. 텍스트 (P): [수정됨] Blur 효과 적용 */}
               <p
-                className={`text-[clamp(0.5vw,0.7vw,0.7vw)] leading-loose text-gray-800 font-light transition-all duration-800 delay-800 ease-[cubic-bezier(0.16,1,0.3,1)]
-                ${introLoaded ? "opacity-100 translate-y-0 blur-0" : "opacity-0 translate-y-[20px] blur-[10px]"}`}
+                className={`text-[clamp(0.5vw,0.7vw,0.7vw)] leading-loose text-gray-800 font-light transition-all duration-1000 delay-700 ease-[cubic-bezier(0.22,1,0.36,1)]
+                ${introLoaded ? "opacity-100 translate-y-0 blur-0" : "opacity-0 translate-y-[40px] blur-[10px]"}`}
               >
                 단순한 구현을 넘어 사용자의 경험에 공감하는
                 <br />
@@ -340,7 +375,7 @@ const App: React.FC = () => {
                 </h2>
               </div>
               <div className="h-full flex flex-col py-8 justify-between border-l border-black/10 pl-10">
-                <div>
+                <div className="hover-target">
                   <Reveal delay={200}>
                     <span className="text-[1.3vw] font-medium mb-2 block tracking-tight">
                       Communication
@@ -354,7 +389,7 @@ const App: React.FC = () => {
                     </p>
                   </Reveal>
                 </div>
-                <div>
+                <div className="hover-target">
                   <Reveal delay={300}>
                     <span className="text-[1.3vw] font-medium mb-2 block tracking-tight">
                       Bright Energy
@@ -378,9 +413,15 @@ const App: React.FC = () => {
             <h1 className="text-[clamp(1vw,2.6vw,2.6vw)] font-semibold leading-[1.3]">
               <Reveal delay={0}>Project</Reveal>
               <div className="h-4" />
-              <Reveal delay={150}>Niz</Reveal>
-              <Reveal delay={300}>Meet Eat</Reveal>
-              <Reveal delay={450}>Comeback Raindear</Reveal>
+              <div className="hover-target w-fit">
+                <Reveal delay={150}>Niz</Reveal>
+              </div>
+              <div className="hover-target w-fit">
+                <Reveal delay={300}>Meet Eat</Reveal>
+              </div>
+              <div className="hover-target w-fit">
+                <Reveal delay={450}>Comeback Raindear</Reveal>
+              </div>
             </h1>
           </div>
         </article>
@@ -396,7 +437,7 @@ const App: React.FC = () => {
                 className="group flex items-center gap-2 hover-target w-max cursor-none absolute top-[1vw] right-[2vw]"
               >
                 <Reveal delay={0}>
-                  <h2 className="text-[clamp(10vw,12.5vw,12.5vw)] font-[Pretendard] font-light leading-none group-hover:text-[#ffea02] transition-colors">
+                  <h2 className="text-[clamp(10vw,12.5vw,12.5vw)] font-[Pretendard] font-light leading-none group-hover:text-[#ffea02] transition-colors duration-300">
                     Niz
                   </h2>
                 </Reveal>
@@ -446,7 +487,7 @@ const App: React.FC = () => {
               className="group flex items-center gap-2 hover-target cursor-none absolute top-[2vw] right-[2.5vw] z-50"
             >
               <Reveal delay={0}>
-                <h2 className="text-[clamp(1vw,5vw,5vw)] font-[Pretendard] font-medium leading-none group-hover:text-[#ffea02] transition-colors ">
+                <h2 className="text-[clamp(1vw,5vw,5vw)] font-[Pretendard] font-medium leading-none group-hover:text-[#ffea02] transition-colors duration-300">
                   Meet Eat
                 </h2>
               </Reveal>
@@ -458,7 +499,7 @@ const App: React.FC = () => {
               className="group flex items-center gap-2 hover-target w-max cursor-none absolute bottom-[9vw] left-[2.5vw] z-50"
             >
               <Reveal delay={800}>
-                <h2 className="text-[clamp(1vw,3.4vw,3.4vw)] font-[Pretendard] font-semibold leading-none group-hover:text-[#ffea02] transition-colors">
+                <h2 className="text-[clamp(1vw,3.4vw,3.4vw)] font-[Pretendard] font-semibold leading-none group-hover:text-[#ffea02] transition-colors duration-300">
                   Comeback Raindear
                 </h2>
               </Reveal>
@@ -547,7 +588,7 @@ const App: React.FC = () => {
           <div className="w-full h-full p-[2.5vw] px-[3.2vw] box-border flex flex-col justify-between font-[Pretendard] text-[clamp(1vw,2.6vw,2.6vw)] font-semibold">
             <button
               onClick={copyEmail}
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[#0f0f0f] bg-transparent border-none cursor-none transition-all"
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[#0f0f0f] bg-transparent border-none cursor-none transition-all hover-target hover:scale-110 duration-300"
             >
               Email
             </button>
@@ -557,7 +598,7 @@ const App: React.FC = () => {
                   href="https://github.com/parkmihyunn"
                   target="_blank"
                   rel="noreferrer"
-                  className=" text-[#0f0f0f] no-underline cursor-none transition-all"
+                  className=" text-[#0f0f0f] no-underline cursor-none transition-all hover-target"
                 >
                   Github
                 </a>
