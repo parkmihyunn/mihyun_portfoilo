@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useLayoutEffect } from "react";
 
-// --- 유틸리티: 선형 보간 (부드러운 움직임 계산) ---
+// --- 유틸리티: 선형 보간 ---
 const lerp = (start: number, end: number, factor: number) => {
   return start + (end - start) * factor;
 };
@@ -25,7 +25,7 @@ const Reveal = ({
           observer.disconnect();
         }
       },
-      { threshold: 0.6 }, // 트리거 타이밍 미세 조정
+      { threshold: 0.2 },
     );
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
@@ -35,7 +35,6 @@ const Reveal = ({
     <div
       ref={ref}
       style={{ transitionDelay: `${delay}ms` }}
-      // cubic-bezier를 수정하여 더 탄력적인 등장 효과 적용
       className={`transition-all duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)] transform
         ${
           isVisible
@@ -49,42 +48,40 @@ const Reveal = ({
   );
 };
 
-// --- 애니메이션 상태 ---
 interface AnimationState {
   currentX: number;
   targetX: number;
   maxScroll: number;
-  skew: number; // [추가] 스크롤 속도에 따른 기울기 값
+  skew: number;
 }
 
 const App: React.FC = () => {
-  // DOM Refs
   const containerRef = useRef<HTMLElement>(null);
   const progressThumbRef = useRef<HTMLDivElement>(null);
   const cursorRef = useRef<HTMLDivElement>(null);
-
-  // FLOW Section Refs
   const flowSlideRef = useRef<HTMLElement>(null);
   const flowTextRef = useRef<HTMLDivElement>(null);
 
   const [introLoaded, setIntroLoaded] = useState(false);
-
-  // [추가] 커서의 부드러운 움직임을 위한 좌표 상태
   const mouse = useRef({ x: 0, y: 0 });
   const cursor = useRef({ x: 0, y: 0 });
-
   const state = useRef<AnimationState>({
     currentX: 0,
     targetX: 0,
     maxScroll: 0,
-    skew: 0, // 초기 기울기 0
+    skew: 0,
   });
 
-  const [, setWindowWidth] = useState(0);
+  const [isVertical, setIsVertical] = useState(false);
 
-  // [초기화]
   useLayoutEffect(() => {
-    setWindowWidth(window.innerWidth);
+    const checkLayout = () => {
+      // 1024px 이하일 때 세로 모드 활성화
+      setIsVertical(window.innerWidth < 1024);
+    };
+    checkLayout();
+    window.addEventListener("resize", checkLayout);
+
     if ("scrollRestoration" in history) {
       history.scrollRestoration = "manual";
     }
@@ -92,10 +89,11 @@ const App: React.FC = () => {
     setTimeout(() => {
       setIntroLoaded(true);
     }, 100);
+
+    return () => window.removeEventListener("resize", checkLayout);
   }, []);
 
   useEffect(() => {
-    // 1. 커서 (이벤트에서는 목표 좌표만 저장 -> 애니메이션 루프에서 이동)
     const onMouseMove = (e: MouseEvent) => {
       mouse.current.x = e.clientX;
       mouse.current.y = e.clientY;
@@ -103,15 +101,19 @@ const App: React.FC = () => {
 
     const hoverStart = () => {
       if (cursorRef.current) {
-        cursorRef.current.classList.remove("w-5", "h-5");
-        cursorRef.current.classList.add("w-8", "h-8", "bg-[#ffea02]/50");
+        cursorRef.current.classList.remove("lg:w-5", "lg:h-5");
+        cursorRef.current.classList.add("lg:w-8", "lg:h-8", "bg-[#ffea02]/50");
       }
     };
 
     const hoverEnd = () => {
       if (cursorRef.current) {
-        cursorRef.current.classList.remove("w-8", "h-8", "bg-[#ffea02]/50");
-        cursorRef.current.classList.add("w-5", "h-5");
+        cursorRef.current.classList.remove(
+          "lg:w-8",
+          "lg:h-8",
+          "bg-[#ffea02]/50",
+        );
+        cursorRef.current.classList.add("lg:w-5", "lg:h-5");
       }
     };
 
@@ -131,26 +133,20 @@ const App: React.FC = () => {
       };
     };
 
-    // DOM 렌더링 타이밍 고려하여 약간 딜레이 후 이벤트 바인딩
     setTimeout(attachHoverEvents, 500);
 
-    // 2. 레이아웃 계산
     const calculateLayout = () => {
-      if (containerRef.current) {
-        const viewportWidth = window.innerWidth;
-        const totalContainerWidth = containerRef.current.scrollWidth;
-
-        state.current.maxScroll = totalContainerWidth - viewportWidth;
-        setWindowWidth(viewportWidth);
+      if (containerRef.current && window.innerWidth >= 1024) {
+        state.current.maxScroll =
+          containerRef.current.scrollWidth - window.innerWidth;
       }
     };
 
     window.addEventListener("resize", calculateLayout);
-    setTimeout(calculateLayout, 100);
     setTimeout(calculateLayout, 500);
 
-    // 3. 휠 이벤트
     const handleWheel = (e: WheelEvent) => {
+      if (window.innerWidth < 1024) return; // lg 이하에서는 기본 세로 스크롤
       e.preventDefault();
       state.current.targetX += e.deltaY;
       state.current.targetX = Math.max(
@@ -160,68 +156,59 @@ const App: React.FC = () => {
     };
     window.addEventListener("wheel", handleWheel, { passive: false });
 
-    // 4. 애니메이션 루프 (Physics Engine)
     let animationFrameId: number;
-
     const animate = () => {
-      // A. 스크롤 물리 엔진 (Inertia + Skew)
-      // 부드러운 감속 (0.08 -> 0.07로 미세 조정하여 더 무겁고 고급스러운 느낌)
-      state.current.currentX = lerp(
-        state.current.currentX,
-        state.current.targetX,
-        0.05,
-      );
+      if (window.innerWidth >= 1024) {
+        // Desktop Horizontal Engine
+        state.current.currentX = lerp(
+          state.current.currentX,
+          state.current.targetX,
+          0.05,
+        );
+        const { currentX, targetX } = state.current;
+        const velocity = targetX - currentX;
+        const targetSkew = velocity * 0.001;
+        state.current.skew = lerp(state.current.skew, targetSkew, 0.1);
 
-      const { currentX, targetX } = state.current;
+        const zoomProgress = Math.min(
+          Math.abs(currentX) / (window.innerWidth * 0.25),
+          1,
+        );
+        const zoomLevel = 1.5 - zoomProgress * 0.5;
 
-      // 속도 계산 (현재 위치 - 목표 위치 차이)
-      const velocity = targetX - currentX;
+        if (containerRef.current) {
+          containerRef.current.style.transform = `translate3d(${-currentX}px, 0, 0) scale(${zoomLevel}) skewX(${state.current.skew}deg)`;
+        }
 
-      // [핵심] 속도에 따른 기울기(Skew) 계산. 빠를수록 더 많이 기울어짐.
-      // maxSkew를 두어 너무 심하게 찌그러지지 않도록 제한
-      const targetSkew = velocity * 0.001;
-      state.current.skew = lerp(state.current.skew, targetSkew, 0.1); // 기울기도 부드럽게 전환
-
-      // Zoom 효과 (기존 유지하되 연결성 강화)
-      const zoomProgress = Math.min(
-        Math.abs(currentX) / (window.innerWidth * 0.25),
-        1,
-      );
-      const zoomLevel = 1.5 - zoomProgress * 0.5;
-
-      if (containerRef.current) {
-        // SkewX 적용으로 젤리 같은 탄성 효과 부여
-        containerRef.current.style.transform = `translate3d(${-currentX}px, 0, 0) scale(${zoomLevel}) skewX(${state.current.skew}deg)`;
+        if (progressThumbRef.current && state.current.maxScroll > 0) {
+          const scrollPercentage = Math.min(
+            Math.max(currentX / state.current.maxScroll, 0),
+            1,
+          );
+          progressThumbRef.current.style.transform = `translateX(${scrollPercentage * 224}px) translateY(-50%)`;
+        }
+      } else {
+        // Vertical Mode Reset
+        if (containerRef.current) {
+          containerRef.current.style.transform = "none";
+        }
       }
 
-      // B. 커서 물리 엔진 (Fluid Follow)
-      // 마우스 위치를 즉시 따라가지 않고 lerp로 뒤따라감
-      cursor.current.x = lerp(cursor.current.x, mouse.current.x, 0.15);
-      cursor.current.y = lerp(cursor.current.y, mouse.current.y, 0.15);
-
+      // Cursor Physics
+      cursor.current.x = lerp(cursor.current.x, mouse.current.x, 0.25);
+      cursor.current.y = lerp(cursor.current.y, mouse.current.y, 0.25);
       if (cursorRef.current) {
         cursorRef.current.style.transform = `translate3d(${cursor.current.x}px, ${cursor.current.y}px, 0) translate(-50%, -50%)`;
       }
 
-      // C. FLOW 텍스트 Parallax
+      // FLOW Text Parallax (가로 모드일 때만 적용되도록 slideRect 기준 계산)
       if (flowSlideRef.current && flowTextRef.current) {
         const slideRect = flowSlideRef.current.getBoundingClientRect();
         const viewportWidth = window.innerWidth;
-
         if (slideRect.right > 0 && slideRect.left < viewportWidth) {
           const offset = viewportWidth - (slideRect.left + slideRect.width / 2);
-          flowTextRef.current.style.transform = `translateX(${-offset * 0.2}px)`; // 속도 조절
+          flowTextRef.current.style.transform = `translateX(${-offset * 0.2}px)`;
         }
-      }
-
-      // D. Progress Bar
-      if (progressThumbRef.current && state.current.maxScroll > 0) {
-        const scrollPercentage = Math.min(
-          Math.max(currentX / state.current.maxScroll, 0),
-          1,
-        );
-        const thumbPos = scrollPercentage * 224;
-        progressThumbRef.current.style.transform = `translateX(${thumbPos}px) translateY(-50%)`;
       }
 
       animationFrameId = requestAnimationFrame(animate);
@@ -229,7 +216,7 @@ const App: React.FC = () => {
     animate();
 
     return () => {
-      window.removeEventListener("mousemove", onMouseMove); // 기존 moveCursor 제거됨
+      window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("resize", calculateLayout);
       window.removeEventListener("wheel", handleWheel);
       cancelAnimationFrame(animationFrameId);
@@ -239,44 +226,23 @@ const App: React.FC = () => {
   const copyEmail = (e: React.MouseEvent<HTMLButtonElement>) => {
     const btn = e.currentTarget;
     navigator.clipboard.writeText("pmh3853@naver.com").then(() => {
-      // const originalText = btn.innerText;
       btn.innerText = "Copied";
-      btn.style.color = "#0f0f0f";
       setTimeout(() => {
         btn.innerText = "Email";
-        btn.style.color = "#0f0f0f";
       }, 2000);
     });
   };
 
-  // 기존 Hover 함수들은 useEffect 내부 로직으로 통합되었으나,
-  // iframe 관련 핸들러는 JSX에서 직접 호출되므로 유지
-  // const handleIframeEnter = () => {
-  //   if (cursorRef.current) {
-  //     cursorRef.current.style.opacity = "0";
-  //   }
-  // };
-
-  // const handleIframeLeave = () => {
-  //   if (cursorRef.current) {
-  //     cursorRef.current.style.opacity = "1";
-  //   }
-  // };
-
-  const paddingLeft = "13.333vw";
-  const paddingRight = "30vw";
-
   return (
-    <div className="relative w-full h-full overflow-hidden bg-[#e5e5e5]">
-      {/* Custom Cursor */}
+    <div className="relative w-full h-full overflow-y-auto lg:overflow-hidden bg-[#e5e5e5]">
+      {/* Custom Cursor (lg 이상에서만 표시) */}
       <div
         ref={cursorRef}
-        // transform은 JS에서 제어하므로 class에서 제거, transition도 JS Lerp와 충돌 방지 위해 제거
-        className="fixed top-0 left-0 w-5 h-5 bg-[#0f0f0f]/20 rounded-full pointer-events-none z-[9999]"
+        className="fixed top-0 left-0 w-5 h-5 bg-[#0f0f0f]/20 rounded-full pointer-events-none z-[9999] hidden lg:block"
       />
 
-      {/* Progress Bar */}
-      <div className="fixed top-10 left-1/2 -translate-x-1/2 w-[240px] h-[30px] flex items-center z-50">
+      {/* Progress Bar (lg 이상에서만 표시) */}
+      <div className="fixed top-10 left-1/2 -translate-x-1/2 w-[240px] h-[30px] hidden lg:flex items-center z-50">
         <div
           className="relative w-full h-4"
           style={{
@@ -292,28 +258,25 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Container */}
       <main
         ref={containerRef}
-        className="flex h-full w-max items-center gap-[2vw] will-change-transform origin-left"
-        style={{ paddingLeft, paddingRight }}
+        className="flex flex-col lg:flex-row h-auto lg:h-full w-full lg:w-max items-center gap-[6vw] lg:gap-[2vw] will-change-transform origin-left py-[15vh] lg:py-0"
+        style={{
+          paddingLeft: isVertical ? "6vw" : "13.333vw",
+          paddingRight: isVertical ? "6vw" : "30vw",
+        }}
       >
         {/* #1 INTRO */}
         <article
-          className={`min-w-162.5 w-[40vw] aspect-5/3 bg-[#f7f7f7] overflow-hidden shrink-0 flex flex-col justify-between relative transform-gpu transition-all duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)]
-            ${introLoaded ? "opacity-100 scale-100" : "opacity-0 scale-90"}`}
+          className={`min-w-full lg:min-w-162.5 w-full lg:w-[40vw] aspect-5/3 bg-[#f7f7f7] overflow-hidden shrink-0 flex flex-col justify-between relative transform-gpu transition-all duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] ${introLoaded ? "opacity-100 scale-100" : "opacity-0 scale-90"}`}
         >
-          {/* 2. 원 (Circle) */}
           <div
-            className={`absolute right-0 w-[60%] aspect-square bg-[#ffea02] rounded-full transition-all duration-1000 delay-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]
-            ${introLoaded ? "scale-100 opacity-100" : "scale-0 opacity-0"}`}
+            className={`absolute right-0 w-[60%] aspect-square bg-[#ffea02] rounded-full transition-all duration-1000 delay-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${introLoaded ? "scale-100 opacity-100" : "scale-0 opacity-0"}`}
           ></div>
-
-          <div className="w-full h-full p-[2vw] box-border flex flex-col justify-between relative z-10">
+          <div className="w-full h-full p-[6vw] lg:p-[2vw] box-border flex flex-col justify-between relative z-10">
             <div className="max-w-3xl">
               <h1
-                className={`text-[clamp(1vw,2.6vw,2.6vw)] font-semibold leading-[1.5] transition-all duration-1000 delay-500 ease-[cubic-bezier(0.22,1,0.36,1)]
-                ${introLoaded ? "opacity-100 translate-y-0 blur-0" : "opacity-0 translate-y-[40px] blur-[10px]"}`}
+                className={`text-[4.7vw] lg:text-[2.6rem] 2xl:text-[2.6vw] font-semibold leading-[1.5] transition-all duration-1000 delay-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${introLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-[40px]"}`}
               >
                 Crafting Digital <br />
                 &nbsp;&nbsp;Web Experiences
@@ -325,8 +288,7 @@ const App: React.FC = () => {
             </div>
             <div className="mt-4">
               <p
-                className={`text-[clamp(0.5vw,0.7vw,0.7vw)] leading-loose text-gray-800 font-light transition-all duration-1000 delay-700 ease-[cubic-bezier(0.22,1,0.36,1)]
-                ${introLoaded ? "opacity-100 translate-y-0 blur-0" : "opacity-0 translate-y-[40px] blur-[10px]"}`}
+                className={`text-[1.8vw] lg:text-[0.7rem] 2xl:text-[0.7vw] leading-loose text-gray-800 font-light transition-all duration-1000 delay-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${introLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-[40px]"}`}
               >
                 단순한 구현을 넘어 사용자의 경험에 공감하는
                 <br />
@@ -341,17 +303,17 @@ const App: React.FC = () => {
         {/* #2-1 PHILOSOPHY (FLOW) */}
         <article
           ref={flowSlideRef}
-          className="min-w-162.5 w-[40vw] aspect-5/3 bg-[#f7f7f7] overflow-hidden shrink-0 flex flex-col justify-center transform-gpu relative"
+          className="min-w-full lg:min-w-162.5 w-full lg:w-[40vw] aspect-5/3 bg-[#f7f7f7] overflow-hidden shrink-0 flex flex-col justify-center transform-gpu relative"
         >
           <div className="w-full h-full flex flex-col justify-center z-10 overflow-hidden items-center relative">
             <div
               ref={flowTextRef}
-              className="w-full h-full text-[clamp(20rem,20vw,20vw)] leading-none font-[Pretendard] font-medium whitespace-nowrap will-change-transform flex items-center relative"
+              className="w-full h-full pl-[6vw] lg:pl-0 text-[35vw] lg:text-[clamp(20rem,20vw,20vw)] leading-none font-[Pretendard] font-medium whitespace-nowrap will-change-transform flex items-center relative"
             >
               Fl&nbsp;
-              <span className="inline-block text-[#ff6702] leading-none z-10 mx-3">
+              <span className="inline-block text-[#ff6702] leading-none lg:z-10 m-0 lg:mx-3 -z-10">
                 &nbsp;&nbsp;&nbsp;
-                <div className="absolute top-1/2 -right-[30.5%] -translate-x-1/2 -translate-y-1/2 h-full aspect-square bg-[#ff6702] rounded-full -z-10" />
+                <div className="absolute top-1/2 -right-[22%] lg:-right-[30.5%] -translate-x-1/2 -translate-y-1/2 h-full aspect-square bg-[#ff6702] rounded-full -z-10" />
               </span>
               &nbsp;w
             </div>
@@ -359,11 +321,11 @@ const App: React.FC = () => {
         </article>
 
         {/* #2 PHILOSOPHY (DETAILS) */}
-        <article className="min-w-162.5 w-[40vw] aspect-5/3 bg-[#f7f7f7] overflow-hidden shrink-0 flex flex-col justify-center transform-gpu">
-          <div className="w-full h-full p-[2vw] box-border flex flex-col justify-center z-10">
+        <article className="min-w-full lg:min-w-162.5 w-full lg:w-[40vw] aspect-5/3 bg-[#f7f7f7] overflow-hidden shrink-0 flex flex-col justify-center transform-gpu">
+          <div className="w-full h-full p-[6vw] lg:p-[2vw] box-border flex flex-col justify-center z-10">
             <div className="flex flex-row justify-between h-full items-center">
-              <div className="flex items-center pr-10">
-                <h2 className="text-[clamp(2.2rem,2.2vw,4.2rem)] font-normal leading-[1.4] tracking-tight break-keep text-[#0f0f0f]">
+              <div className="flex items-center pr-6 lg:pr-10">
+                <h2 className="text-[1.8rem] lg:text-[2.2vw] font-normal leading-[1.4] tracking-tight break-keep text-[#0f0f0f]">
                   <Reveal delay={0}>가장 중요한 건</Reveal>
                   <Reveal delay={100} className="whitespace-nowrap block">
                     <span className="text-[#ff6702] font-semibold">
@@ -407,9 +369,9 @@ const App: React.FC = () => {
         </article>
 
         {/* #3 PROJECT LIST */}
-        <article className="min-w-162.5 w-[40vw] aspect-5/3 bg-[#ffea02] overflow-hidden shrink-0 flex flex-col justify-center transform-gpu">
-          <div className="w-full h-full flex flex-col z-10 overflow-hidden relative p-[2.5vw] ">
-            <h1 className="text-[clamp(1vw,2.6vw,2.6vw)] font-semibold leading-[1.3]">
+        <article className="min-w-full lg:min-w-162.5 w-full lg:w-[40vw] aspect-5/3 bg-[#ffea02] overflow-hidden shrink-0 flex flex-col justify-center transform-gpu">
+          <div className="w-full h-full flex flex-col z-10 overflow-hidden relative p-[6vw] lg:p-[2.5vw]">
+            <h1 className="text-[2rem] lg:text-[2.6vw] font-semibold leading-[1.3]">
               <Reveal delay={0}>Project</Reveal>
               <div className="h-4" />
               <div className="hover-target w-fit">
@@ -425,24 +387,24 @@ const App: React.FC = () => {
           </div>
         </article>
 
-        {/* #3 NIZ Detail */}
-        <article className="min-w-162.5 w-[40vw] aspect-5/3 bg-[#f7f7f7] overflow-hidden shrink-0 flex flex-col justify-center transform-gpu">
-          <div className="flex flex-row justify-between w-full h-full p-[2.5vw]">
+        {/* #4 NIZ Detail */}
+        <article className="min-w-full lg:min-w-162.5 w-full lg:w-[40vw] aspect-5/3 bg-[#f7f7f7] overflow-hidden shrink-0 flex flex-col justify-center transform-gpu">
+          <div className="flex flex-row justify-between w-full h-full p-[6vw] lg:p-[2.5vw] relative">
             <div className="flex flex-col justify-end">
               <a
                 href="https://nizkr.com"
                 target="_blank"
                 rel="noreferrer"
-                className="group flex items-center gap-2 hover-target w-max cursor-none absolute top-[1vw] right-[2vw]"
+                className="group flex items-center gap-2 hover-target lg:cursor-none absolute top-[6vw] lg:top-[1vw] right-[6vw] lg:right-[2vw]"
               >
                 <Reveal delay={0}>
-                  <h2 className="text-[clamp(10vw,12.5vw,12.5vw)] font-[Pretendard] font-light leading-none group-hover:text-[#ffea02] transition-colors duration-300">
+                  <h2 className="text-[6rem] lg:text-[12.5vw] font-[Pretendard] font-light leading-none group-hover:text-[#ffea02] transition-colors duration-300">
                     Niz
                   </h2>
                 </Reveal>
               </a>
               <Reveal delay={400}>
-                <p className="text-[clamp(1.2vw,1.4vw,1.4vw)] font-semibold leading-[2vw] mb-5 text-[#ff6702]">
+                <p className="text-[1.2rem] lg:text-[1.4vw] font-semibold leading-relaxed mb-3 lg:mb-5 text-[#ff6702]">
                   아이디어부터 검증까지.
                   <br />
                   <span className="font-normal text-[#0f0f0f]">
@@ -451,10 +413,9 @@ const App: React.FC = () => {
                 </p>
               </Reveal>
               <Reveal delay={500}>
-                <p className="text-[0.9vw] font-normal leading-relaxed mb-8">
-                  기획, 디자인, 개발, 시장 검증까지
-                  <br />
-                  비즈니스적 가치를 만들어내는 역량을 증명했습니다.
+                <p className="text-[0.85rem] lg:text-[0.9vw] font-normal leading-relaxed mb-6 lg:mb-8">
+                  기획, 디자인, 개발, 시장 검증까지 비즈니스적 가치를 만들어내는
+                  역량을 증명했습니다.
                   <br />
                   <strong>성과:</strong> 초기 사용자 유치 및 피드백 루프 구축.
                 </p>
@@ -465,7 +426,7 @@ const App: React.FC = () => {
                     (tag) => (
                       <span
                         key={tag}
-                        className="text-[clamp(0.6vw,0.6vw,0.6vw)] font-normal text-[#0f0f0f] py-1 pr-4 rounded-md mr-[0.2rem] mb-[0.2rem] whitespace-nowrap"
+                        className="text-[0.7rem] lg:text-[0.6vw] font-normal text-[#0f0f0f] py-1 pr-4 rounded-md whitespace-nowrap"
                       >
                         {tag}
                       </span>
@@ -477,7 +438,8 @@ const App: React.FC = () => {
           </div>
         </article>
 
-        <article className="min-w-162.5 w-[40vw] aspect-5/3 bg-[#f7f7f7] overflow-hidden shrink-0 flex flex-col justify-center transform-gpu">
+        {/* #5 PROJECTS Detail */}
+        <article className="min-w-full lg:min-w-162.5 w-full lg:w-[40vw] aspect-5/3 bg-[#f7f7f7] overflow-hidden shrink-0 flex flex-col justify-center transform-gpu">
           <div className="flex flex-row justify-between w-full h-full p-[2.6vw] py-[2.2vw]">
             <a
               href="https://meet--eat.com/"
@@ -582,12 +544,12 @@ const App: React.FC = () => {
           </div>
         </article>
 
-        {/* #5 FINAL */}
-        <article className="min-w-162.5 w-[40vw] aspect-5/3 bg-[#ffea02] overflow-hidden shrink-0 flex flex-col justify-center transform-gpu relative">
-          <div className="w-full h-full p-[2.5vw] px-[3.2vw] box-border flex flex-col justify-between font-[Pretendard] text-[clamp(1vw,2.6vw,2.6vw)] font-semibold">
+        {/* #6 FINAL */}
+        <article className="min-w-full lg:min-w-162.5 w-full lg:w-[40vw] aspect-5/3 bg-[#ffea02] overflow-hidden shrink-0 flex flex-col justify-center transform-gpu relative">
+          <div className="w-full h-full p-[6vw] lg:p-[2.5vw] box-border flex flex-col justify-between font-[Pretendard] text-[1.8rem] lg:text-[2.6vw] font-semibold">
             <button
               onClick={copyEmail}
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[#0f0f0f] bg-transparent border-none cursor-none transition-all hover-target hover:scale-110 duration-300"
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[#0f0f0f] bg-transparent border-none lg:cursor-none transition-all hover-target hover:scale-110 duration-300"
             >
               Email
             </button>
@@ -597,21 +559,15 @@ const App: React.FC = () => {
                   href="https://github.com/parkmihyunn"
                   target="_blank"
                   rel="noreferrer"
-                  className=" text-[#0f0f0f] no-underline cursor-none transition-all hover-target"
+                  className="text-[#0f0f0f] no-underline lg:cursor-none hover-target hover:scale-110 transition-all"
                 >
                   Github
                 </a>
-                <div className="text-[#0f0f0f] bg-transparent border-none cursor-none transition-all">
-                  2026
-                </div>
+                <div className="text-[#0f0f0f]">2026</div>
               </div>
               <div className="flex flex-row justify-between">
-                <div className=" text-[#0f0f0f] bg-transparent border-none cursor-none transition-all">
-                  Park
-                </div>
-                <div className=" text-[#0f0f0f] bg-transparent border-none cursor-none transition-all">
-                  Mihyun
-                </div>
+                <div>Park</div>
+                <div>Mihyun</div>
               </div>
             </div>
           </div>
