@@ -546,7 +546,7 @@ const App: React.FC = () => {
 
         {/* #6 FINAL */}
         <article className="min-w-full lg:min-w-162.5 w-full lg:w-[40vw] aspect-5/3 bg-[#ffea02] overflow-hidden shrink-0 flex flex-col justify-center transform-gpu relative">
-          <div className="w-full h-full p-[6vw] lg:p-[2.5vw] box-border flex flex-col justify-between font-[Pretendard] text-[2.5rem] lg:text-[3vw] 2xl:text-[2.6vw] font-semibold">
+          <div className="w-full h-full p-[6vw] lg:p-[2.5vw] box-border flex flex-col justify-between font-[Pretendard] text-[5vw] lg:text-[3vw] 2xl:text-[2.6vw] font-semibold">
             <button
               onClick={copyEmail}
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[#0f0f0f] bg-transparent border-none lg:cursor-none transition-all hover-target hover:scale-110 duration-300"
