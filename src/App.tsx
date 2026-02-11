@@ -260,7 +260,7 @@ const App: React.FC = () => {
 
       <main
         ref={containerRef}
-        className="flex flex-col lg:flex-row h-auto lg:h-full w-full lg:w-max items-center gap-[6vw] lg:gap-[2vw] will-change-transform origin-left py-[15vh] lg:py-0"
+        className="flex flex-col lg:flex-row h-auto lg:h-full w-full lg:w-max items-center gap-[6vw] lg:gap-[2vw] will-change-transform origin-left py-[4vh] lg:py-0"
         style={{
           paddingLeft: isVertical ? "6vw" : "13.333vw",
           paddingRight: isVertical ? "6vw" : "30vw",
@@ -288,7 +288,7 @@ const App: React.FC = () => {
             </div>
             <div className="mt-4">
               <p
-                className={`text-[1.8vw] lg:text-[0.7rem] 2xl:text-[0.7vw] leading-loose text-gray-800 font-light transition-all duration-1000 delay-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${introLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-[40px]"}`}
+                className={`text-[1.8vw] lg:text-[0.8rem] 2xl:text-[0.7vw] leading-loose text-gray-800 font-light transition-all duration-1000 delay-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${introLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-[40px]"}`}
               >
                 단순한 구현을 넘어 사용자의 경험에 공감하는
                 <br />
@@ -322,10 +322,10 @@ const App: React.FC = () => {
 
         {/* #2 PHILOSOPHY (DETAILS) */}
         <article className="min-w-full lg:min-w-162.5 w-full lg:w-[40vw] aspect-5/3 bg-[#f7f7f7] overflow-hidden shrink-0 flex flex-col justify-center transform-gpu">
-          <div className="w-full h-full p-[6vw] lg:p-[2vw] box-border flex flex-col justify-center z-10">
+          <div className="w-full h-full p-[6vw] lg:p-[3vw] 2xl:p-[2vw] box-border flex flex-col justify-center z-10">
             <div className="flex flex-row justify-between h-full items-center">
               <div className="flex items-center pr-6 lg:pr-10">
-                <h2 className="text-[1.8rem] lg:text-[2.2vw] font-normal leading-[1.4] tracking-tight break-keep text-[#0f0f0f]">
+                <h2 className="text-[4vw] lg:text-[2.2rem] 2xl:text-[2.2vw] font-normal leading-[1.4] tracking-tight break-keep text-[#0f0f0f]">
                   <Reveal delay={0}>가장 중요한 건</Reveal>
                   <Reveal delay={100} className="whitespace-nowrap block">
                     <span className="text-[#ff6702] font-semibold">
@@ -335,13 +335,13 @@ const App: React.FC = () => {
                   </Reveal>
                 </h2>
               </div>
-              <div className="h-full flex flex-col py-8 justify-between border-l border-black/10 pl-10">
+              <div className="h-full flex flex-col py-2 lg:py-8 justify-between border-l border-black/10 pl-6 lg:pl-10">
                 <div className="hover-target">
                   <Reveal delay={200}>
-                    <span className="text-[1.3vw] font-medium mb-2 block tracking-tight">
+                    <span className="text-[2.8vw] lg:text-[1.3rem] 2xl:text-[1.3vw] font-medium mb-2 block tracking-tight">
                       Communication
                     </span>
-                    <p className="text-[clamp(0.1vw,0.8vw,0.8vw)] text-[#555] leading-[1.6] font-normal">
+                    <p className="text-[1.7vw] lg:text-[0.7rem] 2xl:text-[0.8vw] text-[#555] leading-[1.6] font-normal">
                       기획 단계의 적극적인 의견 제시로
                       <br />
                       분위기를 풀고, 데일리 스크럼을
@@ -352,10 +352,10 @@ const App: React.FC = () => {
                 </div>
                 <div className="hover-target">
                   <Reveal delay={300}>
-                    <span className="text-[1.3vw] font-medium mb-2 block tracking-tight">
+                    <span className="text-[2.8vw] lg:text-[1.3rem] 2xl:text-[1.3vw] font-medium mb-2 block tracking-tight">
                       Bright Energy
                     </span>
-                    <p className="text-[0.8vw] text-[#555] leading-[1.6] font-normal">
+                    <p className="text-[1.7vw] lg:text-[0.7rem] 2xl:text-[0.8vw] text-[#555] leading-[1.6] font-normal">
                       즐겁고 편안한 분위기가 뒷받침될 때<br />
                       최고의 결과가 나옵니다.
                       <br />
@@ -371,7 +371,7 @@ const App: React.FC = () => {
         {/* #3 PROJECT LIST */}
         <article className="min-w-full lg:min-w-162.5 w-full lg:w-[40vw] aspect-5/3 bg-[#ffea02] overflow-hidden shrink-0 flex flex-col justify-center transform-gpu">
           <div className="w-full h-full flex flex-col z-10 overflow-hidden relative p-[6vw] lg:p-[2.5vw]">
-            <h1 className="text-[2rem] lg:text-[2.6vw] font-semibold leading-[1.3]">
+            <h1 className="text-[4.7vw] lg:text-[2.6rem] 2xl:text-[2.6vw] font-semibold leading-[1.3]">
               <Reveal delay={0}>Project</Reveal>
               <div className="h-4" />
               <div className="hover-target w-fit">
@@ -395,16 +395,16 @@ const App: React.FC = () => {
                 href="https://nizkr.com"
                 target="_blank"
                 rel="noreferrer"
-                className="group flex items-center gap-2 hover-target lg:cursor-none absolute top-[6vw] lg:top-[1vw] right-[6vw] lg:right-[2vw]"
+                className="group flex items-center gap-2 hover-target lg:cursor-none absolute top-[3vw] lg:top-[1vw] right-[6vw] lg:right-[2vw]"
               >
                 <Reveal delay={0}>
-                  <h2 className="text-[6rem] lg:text-[12.5vw] font-[Pretendard] font-light leading-none group-hover:text-[#ffea02] transition-colors duration-300">
+                  <h2 className="text-[26.5vw] lg:text-[13rem] 2xl:text-[12.5vw] font-[Pretendard] font-light leading-none group-hover:text-[#ffea02] transition-colors duration-300">
                     Niz
                   </h2>
                 </Reveal>
               </a>
               <Reveal delay={400}>
-                <p className="text-[1.2rem] lg:text-[1.4vw] font-semibold leading-relaxed mb-3 lg:mb-5 text-[#ff6702]">
+                <p className="text-[2.8vw] lg:text-[1.3rem] 2xl:text-[1.4vw] font-semibold leading-relaxed mb-3 lg:mb-5 text-[#ff6702]">
                   아이디어부터 검증까지.
                   <br />
                   <span className="font-normal text-[#0f0f0f]">
@@ -413,7 +413,7 @@ const App: React.FC = () => {
                 </p>
               </Reveal>
               <Reveal delay={500}>
-                <p className="text-[0.85rem] lg:text-[0.9vw] font-normal leading-relaxed mb-6 lg:mb-8">
+                <p className="text-[1.8vw] lg:text-[0.9rem] 2xl:text-[0.9vw] font-normal leading-relaxed mb-6 lg:mb-8">
                   기획, 디자인, 개발, 시장 검증까지 비즈니스적 가치를 만들어내는
                   역량을 증명했습니다.
                   <br />
@@ -426,7 +426,7 @@ const App: React.FC = () => {
                     (tag) => (
                       <span
                         key={tag}
-                        className="text-[0.7rem] lg:text-[0.6vw] font-normal text-[#0f0f0f] py-1 pr-4 rounded-md whitespace-nowrap"
+                        className="text-[1.5vw] lg:text-[0.7rem] 2xl:text-[0.6vw] font-normal text-[#0f0f0f] py-1 pr-4 rounded-md whitespace-nowrap"
                       >
                         {tag}
                       </span>
@@ -440,15 +440,15 @@ const App: React.FC = () => {
 
         {/* #5 PROJECTS Detail */}
         <article className="min-w-full lg:min-w-162.5 w-full lg:w-[40vw] aspect-5/3 bg-[#f7f7f7] overflow-hidden shrink-0 flex flex-col justify-center transform-gpu">
-          <div className="flex flex-row justify-between w-full h-full p-[2.6vw] py-[2.2vw]">
+          <div className="flex flex-row justify-between w-full h-full p-[6vw] lg:p-[2.6vw] 2xl:py-[2.2vw]">
             <a
               href="https://meet--eat.com/"
               target="_blank"
               rel="noreferrer"
-              className="group flex items-center gap-2 hover-target cursor-none absolute top-[2vw] right-[2.5vw] z-50"
+              className="group flex items-center gap-2 hover-target cursor-none absolute top-[4vw] right-[5vw] lg:top-[2vw] lg:right-[2.5vw] 2xl:top-[1.8vw] z-50"
             >
               <Reveal delay={0}>
-                <h2 className="text-[clamp(1vw,5vw,5vw)] font-[Pretendard] font-medium leading-none group-hover:text-[#ffea02] transition-colors duration-300">
+                <h2 className="text-[12vw] lg:text-[5rem] 2xl:text-[5.2vw] font-[Pretendard] font-medium leading-none group-hover:text-[#ffea02] transition-colors duration-300">
                   Meet Eat
                 </h2>
               </Reveal>
@@ -457,21 +457,21 @@ const App: React.FC = () => {
               href="https://youtu.be/mWBPkVuj4w8"
               target="_blank"
               rel="noreferrer"
-              className="group flex items-center gap-2 hover-target w-max cursor-none absolute bottom-[9vw] left-[2.5vw] z-50"
+              className="group flex items-center gap-2 hover-target w-max cursor-none absolute bottom-[39%] 2xl:bottom-[9.2vw] left-[5.5vw] lg:left-[2.5vw] 2xl:left-[2.2vw] z-50"
             >
               <Reveal delay={800}>
-                <h2 className="text-[clamp(1vw,3.4vw,3.4vw)] font-[Pretendard] font-semibold leading-none group-hover:text-[#ffea02] transition-colors duration-300">
+                <h2 className="text-[7vw] lg:text-[3rem] 2xl:text-[3.2vw] font-[Pretendard] font-semibold leading-none group-hover:text-[#ffea02] transition-colors duration-300">
                   Comeback Raindear
                 </h2>
               </Reveal>
             </a>
             <Reveal delay={1600}>
-              <div className="absolute flex flex-row gap-1 bottom-0 left-0">
+              <div className="absolute flex flex-row gap-1 bottom-0 lg:bottom-0.5 left-0">
                 {["Next.js", "Tailwind CSS", "HeroUI", "AWS EC2", "AWS S3"].map(
                   (tag) => (
                     <span
                       key={tag}
-                      className="text-[clamp(0.6vw,0.6vw,0.6vw)] font-normal text-[#424242] pt-1 pr-4 rounded-md mr-[0.2rem] whitespace-nowrap"
+                      className="text-[1.4vw] lg:text-[0.7rem] 2xl:text-[0.7vw] font-normal text-[#424242] pt-1 pr-1 lg:pr-4 rounded-md mr-[0.2rem] whitespace-nowrap"
                     >
                       {tag}
                     </span>
@@ -482,12 +482,12 @@ const App: React.FC = () => {
             <div className="flex flex-col justify-between w-full">
               <div>
                 <Reveal delay={400}>
-                  <p className="text-[clamp(1vw,1.1vw,1.1vw)] font-medium leading-[2vw] mb-2 text-[#ff6702] ">
+                  <p className="text-[2.2vw] lg:text-[1.15rem] 2xl:text-[1.1vw]  font-medium leading-[2vw] mb-2 text-[#ff6702] ">
                     실시간 위치 기반 식사 매칭
                   </p>
                 </Reveal>
                 <Reveal delay={500}>
-                  <ul className="list-inside text-[0.73vw] font-light space-y-1 text-xs mb-1 leading-relaxed">
+                  <ul className="list-inside text-[1.55vw] lg:text-[0.85rem] 2xl:text-[0.75vw] font-light space-y-1 text-xs mb-1 leading-relaxed">
                     <li>
                       <strong>SSE & KakaoMap:</strong> 실시간 매칭 구현
                     </li>
@@ -512,7 +512,7 @@ const App: React.FC = () => {
                     ].map((tag) => (
                       <span
                         key={tag}
-                        className="text-[clamp(0.6vw,0.6vw,0.6vw)] font-normal text-[#424242] pt-1 pr-4 rounded-md mr-[0.2rem] whitespace-nowrap"
+                        className="text-[1.4vw] lg:text-[0.7rem] 2xl:text-[0.7vw] font-normal text-[#424242] pt-1 pr-1 lg:pr-4 rounded-md mr-[0.2rem] whitespace-nowrap"
                       >
                         {tag}
                       </span>
@@ -522,12 +522,12 @@ const App: React.FC = () => {
               </div>
               <div className="text-right">
                 <Reveal delay={900}>
-                  <p className="text-[clamp(1vw,1vw,1vw)] font-medium leading-[2vw] mb-2 text-[#ff6702] ">
+                  <p className="text-[2.2vw] lg:text-[1.15rem] 2xl:text-[1.1vw]  font-medium leading-[2vw] mb-2 text-[#ff6702] ">
                     랜덤 퀴즈 & 커스터마이징
                   </p>
                 </Reveal>
                 <Reveal delay={1000}>
-                  <ul className="list-inside text-[0.68vw] font-light space-y-1 text-xs mb-1 leading-relaxed">
+                  <ul className="list-inside text-[1.55vw] lg:text-[0.85rem] 2xl:text-[0.75vw] font-light space-y-1 text-xs leading-relaxed">
                     <li>
                       <strong>Interactive:</strong> 동적 CSS 애니메이션
                     </li>
@@ -535,7 +535,7 @@ const App: React.FC = () => {
                       <strong>Logic:</strong> 랜덤 순록 조합 및 도감
                     </li>
                     <li>
-                      <strong>Infra:</strong> AWS EC2 및 S3 이미지 업로드
+                      <strong>Infra:</strong> AWS EC2 및 S3 업로드
                     </li>
                   </ul>
                 </Reveal>
@@ -546,7 +546,7 @@ const App: React.FC = () => {
 
         {/* #6 FINAL */}
         <article className="min-w-full lg:min-w-162.5 w-full lg:w-[40vw] aspect-5/3 bg-[#ffea02] overflow-hidden shrink-0 flex flex-col justify-center transform-gpu relative">
-          <div className="w-full h-full p-[6vw] lg:p-[2.5vw] box-border flex flex-col justify-between font-[Pretendard] text-[1.8rem] lg:text-[2.6vw] font-semibold">
+          <div className="w-full h-full p-[6vw] lg:p-[2.5vw] box-border flex flex-col justify-between font-[Pretendard] text-[2.5rem] lg:text-[3vw] 2xl:text-[2.6vw] font-semibold">
             <button
               onClick={copyEmail}
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[#0f0f0f] bg-transparent border-none lg:cursor-none transition-all hover-target hover:scale-110 duration-300"
